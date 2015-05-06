@@ -1,6 +1,9 @@
+%define _enable_debug_packages %{nil}
+%define debug_package %{nil}
+
 %define major		%{version}
 %define libname		%mklibname opal %{major}
-%define develname	%mklibname %{name} -d
+%define devname		%mklibname %{name} -d
 
 ######################
 # Hardcode PLF build
@@ -18,7 +21,7 @@
 Summary:	VoIP library
 Name:		opal3
 Version:	3.10.10
-Release:	3%{?extrarelsuffix}
+Release:	4%{?extrarelsuffix}
 License:	MPL
 Group:		System/Libraries
 URL:		http://www.opalvoip.org/
@@ -27,13 +30,12 @@ Patch0:		opal-3.10.7-fix-link.patch
 Patch2:		opal-3.10.7-ffmpeg-0.11.patch
 Patch3:		opal-3.10.10-ffmpeg-2.0.patch
 BuildRequires:	gawk
-BuildRequires:	pkgconfig(openssl)
 BuildRequires:	openldap-devel
-BuildRequires:	pkgconfig(ptlib)
+BuildRequires:	ptlib-devel >= 2.10.7
+BuildRequires:	pkgconfig(openssl)
 BuildRequires:	pkgconfig(speex)
 BuildRequires:	pkgconfig(theora)
-BuildRequires:	ffmpeg-devel >= 2.5.4
-BuildRequires:	gomp-devel
+BuildRequires:	ffmpeg-devel
 %if %{build_plf}
 BuildRequires:	pkgconfig(x264)
 %endif
@@ -48,60 +50,74 @@ This package is in restricted repository because the H264 codec is
 covered by patents.
 %endif
 
+#----------------------------------------------------------------------------
+
 %package -n	%{libname}-plugins
 Summary:	Codec plugins for Opal
 Group:		System/Libraries
-Provides:	%{name}-plugins = %{version}-%{release}
-Obsoletes:	%{mklibname opal 3}-plugins < 3.4.1-2mdv
+Provides:	%{name}-plugins = %{EVRD}
 
 %description -n	%{libname}-plugins
 PTlib codec plugins for various formats provided by Opal.
 
+%files -n %{libname}-plugins
+%{_libdir}/opal-%{version}/codecs/audio/*
+%{_libdir}/opal-%{version}/codecs/video/*
+
+#----------------------------------------------------------------------------
+
 %package -n	%{libname}
 Summary:	Opal Library
 Group:		System/Libraries
-Provides:	%{name} = %{version}-%{release}
-Requires:	%{libname}-plugins = %{version}-%{release}
-Obsoletes:	%{mklibname opal 3} < 3.4.1-2mdv
+Provides:	%{name} = %{EVRD}
+Requires:	%{libname}-plugins = %{EVRD}
 
 %description -n	%{libname}
 Shared library for OPAL (SIP / H323 stack).
 
-%package -n	%{develname}
+%files -n %{libname}
+%attr(0755,root,root) %{_libdir}/lib*.so.%{major}*
+
+#----------------------------------------------------------------------------
+
+%package -n	%{devname}
 Summary:	Opal development files
 Group:		Development/C
-Requires:	%{libname} = %{version}-%{release} 
-Provides:	%{name}-devel = %{version}-%{release}
-Conflicts:	%{mklibname opal -d}
+Requires:	%{libname} = %{EVRD}
+Provides:	%{name}-devel = %{EVRD}
 
-%description -n	%{develname}
+%description -n	%{devname}
 Header files and libraries for developing applications that use
 Opal.
 
+%files -n %{devname}
+%doc mpl-1.0.htm
+%attr(0755,root,root) %{_libdir}/*.so
+%{_libdir}/*.*a
+%{_includedir}/*
+%{_libdir}/pkgconfig/opal.pc
+
+#----------------------------------------------------------------------------
+
 %prep
 %setup -q -n opal-%{version}
-%patch0 -p0 -b .link~
-%patch2 -p0 -b .ffmpeg~
-%patch3 -p1 -b .ffmpeg2~
+%patch0 -p0 -b .link
+%patch2 -p0 -b .ffmpeg
+%patch3 -p1 -b .ffmpeg2
 
 %build
-%global optflags %{optflags} -Ofast -fopenmp
+#gw don't use the default %%optflags, see
+# https://qa.mandriva.com/show_bug.cgi?id=48476
+%define optflags %nil
+#gw else the UINT64_C macro is not defined by stdint.h
+export STDCCFLAGS=-D__STDC_CONSTANT_MACROS
 %configure2_5x
 %make
 
 %install
 %makeinstall_std
 
-%files -n %{libname}
-%{_libdir}/libopal.so.%{major}*
+# remove incorrect symlinks (http://bugzilla.gnome.org/show_bug.cgi?id=553808 )
+rm -f %{buildroot}%{_libdir}/libopal.so.?
+rm -f %{buildroot}%{_libdir}/libopal.so.?.?
 
-%files -n %{libname}-plugins
-%{_libdir}/opal-%{version}/codecs/audio/*
-%{_libdir}/opal-%{version}/codecs/video/*
-
-%files -n %{develname}
-%doc mpl-1.0.htm
-%{_libdir}/libopal.so
-%{_libdir}/libopal_s.a
-%{_includedir}/opal
-%{_libdir}/pkgconfig/opal.pc
