@@ -1,0 +1,11 @@
+--- plugins/plugin-inc.mak.in~	2012-08-23 10:18:47.000000000 +0800
++++ plugins/plugin-inc.mak.in	2012-08-27 11:22:19.000000000 +0800
+@@ -73,7 +73,7 @@
+ OBJECTS	= $(addprefix $(OBJDIR)/,$(patsubst %.cxx,%.o,$(patsubst %.cpp,%.o,$(patsubst %.c,%.o,$(notdir $(SRCS))))))
+ 
+ $(PLUGIN_PATH): $(SUBDIRS) $(OBJECTS)
+-	$(Q_LD)$(CXX) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS)
++	$(Q_LD)$(CXX) $(LDFLAGS) -o $@ $(OBJECTS) $(LIBS) -lpthread
+ 
+ ifneq ($(SUBDIRS),)
+ .PHONY: $(SUBDIRS)

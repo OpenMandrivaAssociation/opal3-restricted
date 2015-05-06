@@ -1,0 +1,100 @@
+--- plugins/video/H.263-1998/h263-1998.cxx~	2012-08-23 10:18:42.000000000 +0800
++++ plugins/video/H.263-1998/h263-1998.cxx	2012-08-27 12:20:11.000000000 +0800
+@@ -312,6 +312,19 @@
+     return;
+   }
+ 
++  #ifndef CODEC_FLAG_OBMC
++  #define CODEC_FLAG_OBMC 0x00000001
++  #endif
++  #ifndef CODEC_FLAG_H263P_AIV
++  #define CODEC_FLAG_H263P_AIV 0x00000008
++  #endif
++  #ifndef CODEC_FLAG_H263P_UMV
++  #define CODEC_FLAG_H263P_UMV 0x02000000
++  #endif
++  #ifndef CODEC_FLAG_H263P_SLICE_STRUCT
++  #define CODEC_FLAG_H263P_SLICE_STRUCT 0x10000000
++  #endif
++
+   if (STRCMPI(option, H263_ANNEX_D) == 0) {
+     // Annex D: Unrestructed Motion Vectors
+     // Level 2+ 
+@@ -521,7 +534,7 @@
+ 
+     // Need to copy to local buffer to guarantee 16 byte alignment
+     memcpy(m_inputFrame->data[0], OPAL_VIDEO_FRAME_DATA_PTR(header), header->width*header->height*3/2);
+-    m_inputFrame->pict_type = (flags & PluginCodec_CoderForceIFrame) ? FF_I_TYPE : AV_PICTURE_TYPE_NONE;
++    m_inputFrame->pict_type = (flags & PluginCodec_CoderForceIFrame) ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_P;
+ 
+     /*
+     m_inputFrame->pts = (int64_t)srcRTP.GetTimestamp()*m_context->time_base.den/m_context->time_base.num/VIDEO_CLOCKRATE;
+--- plugins/video/MPEG4-ffmpeg/mpeg4.cxx~	2012-08-23 10:18:44.000000000 +0800
++++ plugins/video/MPEG4-ffmpeg/mpeg4.cxx	2012-08-27 12:28:45.000000000 +0800
+@@ -538,6 +538,16 @@
+ // unchanged through the duration of the encoding context.
+ //
+ 
++#ifndef CODEC_FLAG_H263P_UMV
++#define CODEC_FLAG_H263P_UMV      0x02000000
++#endif
++#ifndef CODEC_FLAG_H263P_SLICE_STRUCT
++#define CODEC_FLAG_H263P_SLICE_STRUCT 0x10000000
++#endif
++#ifndef CODEC_FLAG_PART
++#define CODEC_FLAG_PART   0x0080
++#endif
++
+ void MPEG4EncoderContext::SetStaticEncodingParams(){
+     m_avcontext->pix_fmt = PIX_FMT_YUV420P;
+     m_avcontext->mb_decision = FF_MB_DECISION_SIMPLE;    // high quality off
+@@ -804,11 +814,17 @@
+         // Should the next frame be an I-Frame?
+         if ((flags & PluginCodec_CoderForceIFrame) || (m_frameNum == 0))
+         {
+-            m_avpicture->pict_type = FF_I_TYPE;
++            m_avpicture->pict_type = AV_PICTURE_TYPE_I;
+         }
+         else // No IFrame requested, let avcodec decide what to do
+         {
++	#if (LIBAVUTIL_VERSION_MAJOR < 51 || (LIBAVUTIL_VERSION_MAJOR == 51 && LIBAVUTIL_VERSION_MINOR == 0))
+             m_avpicture->pict_type = AV_PICTURE_TYPE_NONE;
++	#elif (LIBAVUTIL_VERSION_MAJOR == 51 && LIBAVUTIL_VERSION_MINOR > 0 && LIBAVUTIL_VERSION_MINOR <= 10)
++	    m_avpicture->pict_type = (AVPictureType) 0;
++	#elif (LIBAVUTIL_VERSION_MAJOR > 51 || (LIBAVUTIL_VERSION_MAJOR == 51 && LIBAVUTIL_VERSION_MINOR > 10))
++	    m_avpicture->pict_type = AV_PICTURE_TYPE_NONE;
++	#endif
+         }
+ 
+         // Encode a frame
+@@ -1339,7 +1355,7 @@
+     if (m_doError) {
+         int errors = 0;
+         MpegEncContext *s = (MpegEncContext *) m_avcontext->priv_data;
+-        if (s->error_count && m_avcontext->coded_frame->pict_type == FF_I_TYPE) {
++        if (s->error_count && m_avcontext->coded_frame->pict_type == AV_PICTURE_TYPE_I) {
+             const uint8_t badflags = AC_ERROR | DC_ERROR | MV_ERROR;
+             for (int i = 0; i < s->mb_num && errors < threshold; ++i) {
+                 if (s->error_status_table[s->mb_index2xy[i]] & badflags)
+--- plugins/video/H.264/h264-x264.cxx~	2012-08-23 10:18:41.000000000 +0800
++++ plugins/video/H.264/h264-x264.cxx	2012-08-27 13:41:32.000000000 +0800
+@@ -1070,8 +1070,18 @@
+       if ((m_context = FFMPEGLibraryInstance.AvcodecAllocContext()) == NULL)
+         return false;
+ 
++#ifndef CODEC_FLAG2_BRDO
++#define CODEC_FLAG2_BRDO 0x00000400
++#endif
++#ifndef CODEC_FLAG2_MEMC_ONLY
++#define CODEC_FLAG2_MEMC_ONLY 0x00001000
++#endif
++#ifndef FF_ER_AGGRESSIVE
++#define FF_ER_AGGRESSIVE 3
++#endif
++
+       m_context->workaround_bugs = FF_BUG_AUTODETECT;
+-      m_context->error_recognition = FF_ER_AGGRESSIVE;
++      m_context->err_recognition = FF_ER_AGGRESSIVE;
+       m_context->idct_algo = FF_IDCT_H264;
+       m_context->error_concealment = FF_EC_GUESS_MVS | FF_EC_DEBLOCK;
+       m_context->flags = CODEC_FLAG_INPUT_PRESERVED | CODEC_FLAG_EMU_EDGE;
