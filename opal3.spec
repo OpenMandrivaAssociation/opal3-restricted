@@ -21,7 +21,7 @@ Version:	3.10.10
 Release:	3%{?extrarelsuffix}
 License:	MPL
 Group:		System/Libraries
-URL:		http://www.opalvoip.org/
+URL:		https://www.opalvoip.org/
 Source0:	ftp://ftp.gnome.org/pub/GNOME/sources/opal/%{url_ver}/opal-%{version}.tar.xz
 Patch0:		opal-3.10.7-fix-link.patch
 Patch2:		opal-3.10.7-ffmpeg-0.11.patch
