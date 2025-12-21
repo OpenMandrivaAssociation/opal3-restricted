@@ -26,6 +26,11 @@ Source0:	ftp://ftp.gnome.org/pub/GNOME/sources/opal/%{url_ver}/opal-%{version}.t
 Patch0:		opal-3.10.7-fix-link.patch
 Patch2:		opal-3.10.7-ffmpeg-0.11.patch
 Patch3:		opal-3.10.10-ffmpeg-2.0.patch
+BuildRequires:	autoconf
+BuildRequires:	automake
+BuildRequires:	libtool-base
+BuildRequires:	slibtool
+BuildRequires:	make
 BuildRequires:	gawk
 BuildRequires:	pkgconfig(openssl)
 BuildRequires:	openldap-devel
